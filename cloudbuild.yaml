@@ -23,7 +23,7 @@ steps:
       - 'gsutil'
       - 'cp'
       - '/workspace/trivy-report.json'
-      - 'gs://trivyreports123-$PROJECT_ID/trivy-report-$SHORT_SHA.json'
+      - 'gs://trivyreports123/trivy-report-$SHORT_SHA.json'
 
   # 5. Deploy to Cloud Run (optional)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
