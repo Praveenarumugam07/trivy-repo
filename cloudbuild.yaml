@@ -1,0 +1,41 @@
+steps:
+  # 1. Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/trivy-flask-repo/flask-app:$SHORT_SHA', '.']
+
+  # 2. Push image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/trivy-flask-repo/flask-app:$SHORT_SHA']
+
+  # 3. Run Trivy scan
+  - name: 'aquasec/trivy:latest'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        trivy image --format json \
+          --output /workspace/trivy-report.json \
+          us-central1-docker.pkg.dev/$PROJECT_ID/trivy-flask-repo/flask-app:$SHORT_SHA
+
+  # 4. Upload Trivy report to GCS
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'gsutil'
+      - 'cp'
+      - '/workspace/trivy-report.json'
+      - 'gs://flask-trivy-reports-$PROJECT_ID/trivy-report-$SHORT_SHA.json'
+
+  # 5. Deploy to Cloud Run (optional)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'gcloud'
+      - 'run'
+      - 'deploy'
+      - 'flask-service'
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/trivy-flask-repo/flask-app:$SHORT_SHA'
+      - '--platform=managed'
+      - '--region=us-central1'
+      - '--allow-unauthenticated'
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/trivy-flask-repo/flask-app:$SHORT_SHA'
